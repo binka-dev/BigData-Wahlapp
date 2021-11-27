@@ -11,6 +11,38 @@ data:
     `number_of_votes` INT UNSIGNED NOT NULL,
     UNIQUE INDEX `primary_index` (`election_uuid` ASC, `party_id` ASC));
 
+    CREATE TABLE `election_app`.`parties` (
+    `party_id` INT UNSIGNED NOT NULL,
+    `party_name` VARCHAR(50) NOT NULL,
+    `party_description` VARCHAR(180),
+    PRIMARY KEY(`party_id`));
+
+    CREATE TABLE `election_app`.`elections` (
+    `election_uuid` INT UNSIGNED NOT NULL,
+    `election_name` INT VARCHAR(50) NOT NULL,
+    PRIMARY KEY(`election_uuid`));
+
+    INSERT INTO parties (party_id, party_name, party_description) VALUES (0, 'Andere', 'Alle nicht aufgeführten Parteien');
+    INSERT INTO parties (party_id, party_name, party_description) VALUES (1, 'CDU', 'Christlich Demokratische Union Deutschlands');
+    INSERT INTO parties (party_id, party_name, party_description) VALUES (2, 'SPD', 'Sozialdemokratische Partei Deutschlands');
+    INSERT INTO parties (party_id, party_name, party_description) VALUES (3, 'Grüne', 'BÜNDNIS 90/DIE GRÜNEN');
+    INSERT INTO parties (party_id, party_name, party_description) VALUES (4, 'FDP', 'Freie Demokratische Partei');
+    INSERT INTO parties (party_id, party_name, party_description) VALUES (5, 'AFD', 'Alternative für Deutschland');
+    INSERT INTO parties (party_id, party_name, party_description) VALUES (6, 'CSU', 'Christlich-Soziale Union in Bayern e.V.');
+    INSERT INTO parties (party_id, party_name, party_description) VALUES (7, 'Linke', 'DIE LINKE');
+
+    INSERT INTO elections (election_uuid, election_name) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 'Bundestagswahl 2021');
+
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 1, 200);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 2, 300);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 3, 150);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 4, 100);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 5, 120);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 6, 60);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 7, 70);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 0, 50);
+
+
 ---
 apiVersion: apps/v1
 kind: Deployment

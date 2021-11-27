@@ -8,7 +8,12 @@ const express = require('express')
 
 const app = express()
 const cacheTimeSecs = 15
-const numberOfMissions = 30
+// const numberOfMissions = 30
+// Including "others"
+const numberOfParties = 8
+
+// The amount of votes per click
+const numVotesPerClick = 100
 
 // -------------------------------------------------------
 // Command-line options
@@ -20,7 +25,7 @@ let options = optionparser
 	.option('--port <port>', "Web server port", 3000)
 	// Kafka options
 	.option('--kafka-broker <host:port>', "Kafka bootstrap host:port", "my-cluster-kafka-bootstrap:9092")
-	.option('--kafka-topic-tracking <topic>', "Kafka topic to tracking data send to", "tracking-data")
+	.option('--kafka-topic-tracking <topic>', "Kafka topic to tracking data send to", "election_input")
 	.option('--kafka-client-id < id > ', "Kafka client ID", "tracker-" + Math.floor(Math.random() * 100000))
 	// Memcached options
 	.option('--memcached-hostname <hostname>', 'Memcached hostname (may resolve to multiple IPs)', 'my-memcached-service')
@@ -29,7 +34,7 @@ let options = optionparser
 	// Database options
 	.option('--mysql-host <host>', 'MySQL host', 'my-app-mysql-service')
 	.option('--mysql-port <port>', 'MySQL port', 33060)
-	.option('--mysql-schema <db>', 'MySQL Schema/database', 'popular')
+	.option('--mysql-schema <db>', 'MySQL Schema/database', 'election_app')
 	.option('--mysql-username <username>', 'MySQL username', 'root')
 	.option('--mysql-password <password>', 'MySQL password', 'mysecretpw')
 	// Misc
@@ -141,24 +146,24 @@ function sendResponse(res, html, cachedResult) {
 		<head>
 			<meta charset="UTF-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<title>Big Data Use-Case Demo</title>
+			<title>Election App</title>
 			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css">
 			<script>
-				function fetchRandomMissions() {
-					const maxRepetitions = Math.floor(Math.random() * 200)
-					document.getElementById("out").innerText = "Fetching " + maxRepetitions + " random missions, see console output"
+				function generateRandomVotes() {
+					const maxRepetitions = Math.floor(Math.random() * 50)
+					document.getElementById("out").innerText = "Generating " + maxRepetitions + " votes, see console output"
 					for(var i = 0; i < maxRepetitions; ++i) {
-						const missionId = Math.floor(Math.random() * ${numberOfMissions})
-						console.log("Fetching mission id " + missionId)
-						fetch("/missions/sts-" + missionId, {cache: 'no-cache'})
+						const partyId = Math.floor(Math.random() * ${numberOfParties})
+						console.log("Voting for party id " + partyId)
+						fetch("/parties/" + partyId, {cache: 'no-cache'})
 					}
 				}
 			</script>
 		</head>
 		<body>
-			<h1>Big Data Use Case Demo - Test skaffold de</h1>
+			<h1>Election App</h1>
 			<p>
-				<a href="javascript: fetchRandomMissions();">Randomly fetch some missions</a>
+				<a href="javascript: generateRandomVotes();">Randomly generate some votes</a>
 				<span id="out"></span>
 			</p>
 			${html}
@@ -179,9 +184,10 @@ function sendResponse(res, html, cachedResult) {
 // Start page
 // -------------------------------------------------------
 
-// Get list of missions (from cache or db)
-async function getMissions() {
-	const key = 'missions'
+// Get list of current election results (from cache or db)
+async function getParties() {
+	// const key = 'missions'
+	const key = 'parties'
 	let cachedata = await getFromCache(key)
 
 	if (cachedata) {
@@ -189,7 +195,8 @@ async function getMissions() {
 		return { result: cachedata, cached: true }
 	} else {
 		console.log(`Cache miss for key=${key}, querying database`)
-		let executeResult = await executeQuery("SELECT mission FROM missions", [])
+		// let executeResult = await executeQuery("SELECT mission FROM missions", [])
+		let executeResult = await executeQuery("SELECT party_id FROM parties", [])
 		let data = executeResult.fetchAll()
 		if (data) {
 			let result = data.map(row => row[0])
@@ -198,43 +205,66 @@ async function getMissions() {
 				await memcached.set(key, result, cacheTimeSecs);
 			return { result, cached: false }
 		} else {
-			throw "No missions data found"
+			throw "No parties found"
 		}
 	}
 }
 
 // Get popular missions (from db only)
-async function getPopular(maxCount) {
-	const query = "SELECT mission, count FROM popular ORDER BY count DESC LIMIT ?"
-	return (await executeQuery(query, [maxCount]))
+// async function getPopular(maxCount) {
+async function getVotes() {
+	// const query = "SELECT mission, count FROM popular ORDER BY count DESC LIMIT ?"
+	const query = "SELECT party_id, number_of_votes FROM election_results WHERE election_uuid='fdf293ee-bace-40c9-845d-1fb559b50e72' ORDER BY number_of_votes DESC"
+	return (await executeQuery(query, []))
 		.fetchAll()
-		.map(row => ({ mission: row[0], count: row[1] }))
+		// .map(row => ({ mission: row[0], count: row[1] }))
+		.map(row => ({ party: row[0], count: row[1] }))
 }
 
 // Return HTML for start page
 app.get("/", (req, res) => {
-	const topX = 10;
-	Promise.all([getMissions(), getPopular(topX)]).then(values => {
-		const missions = values[0]
-		const popular = values[1]
+	// const topX = 10;
+	// Promise.all([getMissions(), getPopular(topX)]).then(values => {
+	Promise.all([getParties(), getVotes]).then(values => {
+		// const missions = values[0]
+		// const popular = values[1]
+		const parties = values[0]
+		const votes = values[1]
 
-		const missionsHtml = missions.result
-			.map(m => `<a href='missions/${m}'>${m}</a>`)
+		// const missionsHtml = missions.result
+		// 	.map(m => `<a href='missions/${m}'>${m}</a>`)
+		// 	.join(", ")
+
+		// const popularHtml = popular
+		// 	.map(pop => `<li> <a href='missions/${pop.mission}'>${pop.mission}</a> (${pop.count} views) </li>`)
+		// 	.join("\n")
+
+		// const html = `
+		// 	<h1>Top ${topX} Missions</h1>		
+		// 	<p>
+		// 		<ol style="margin-left: 2em;"> ${popularHtml} </ol> 
+		// 	</p>
+		// 	<h1>All Missions</h1>
+		// 	<p> ${missionsHtml} </p>
+		// `
+		// sendResponse(res, html, missions.cached)
+		const partiesHtml = parties.result
+			.map(p => `<a href='parties/${p}'>${p}</a>`)
 			.join(", ")
 
-		const popularHtml = popular
-			.map(pop => `<li> <a href='missions/${pop.mission}'>${pop.mission}</a> (${pop.count} views) </li>`)
+		const votesHtml = votes
+			.map(vote => `<li> <a href='missions/${vote.party}'>${vote.party}</a> (${vote.count} views) </li>`)
 			.join("\n")
 
 		const html = `
-			<h1>Top ${topX} Missions</h1>		
+			<h1>Votes</h1>		
 			<p>
-				<ol style="margin-left: 2em;"> ${popularHtml} </ol> 
+				<ol style="margin-left: 2em;"> ${votesHtml} </ol> 
 			</p>
-			<h1>All Missions</h1>
-			<p> ${missionsHtml} </p>
+			<h1>Vot for Parties:</h1>
+			<p> ${partiesHtml} </p>
 		`
-		sendResponse(res, html, missions.cached)
+		sendResponse(res, html, parties.cached)
 	})
 })
 
@@ -242,9 +272,9 @@ app.get("/", (req, res) => {
 // Get a specific mission (from cache or DB)
 // -------------------------------------------------------
 
-async function getMission(mission) {
-	const query = "SELECT mission, heading, description FROM missions WHERE mission = ?"
-	const key = 'mission_' + mission
+async function getParty(partyId) {
+	const query = "SELECT party_name, party_description FROM parties WHERE party_id = ?"
+	const key = 'party_' + partyId
 	let cachedata = await getFromCache(key)
 
 	if (cachedata) {
@@ -253,32 +283,38 @@ async function getMission(mission) {
 	} else {
 		console.log(`Cache miss for key=${key}, querying database`)
 
-		let data = (await executeQuery(query, [mission])).fetchOne()
+		let data = (await executeQuery(query, [partyId])).fetchOne()
 		if (data) {
-			let result = { mission: data[0], heading: data[1], description: data[2] }
+			let result = { party_id: partyId, name: data[0], description: data[1] }
 			console.log(`Got result=${result}, storing in cache`)
 			if (memcached)
 				await memcached.set(key, result, cacheTimeSecs);
 			return { ...result, cached: false }
 		} else {
-			throw "No data found for this mission"
+			throw "No data found for this party"
 		}
 	}
 }
 
-app.get("/missions/:mission", (req, res) => {
-	let mission = req.params["mission"]
+app.get("/parties/:partyId", (req, res) => {
+	let partyId = req.params["partyId"]
+
+	// 100 votes per click
+	let election_object = {
+        election_id: "fdf293ee-bace-40c9-845d-1fb559b50e72",
+        votes:[
+            {party_id: partyId, number_of_votes: 100}, 
+        ]
+    }
 
 	// Send the tracking message to Kafka
-	sendTrackingMessage({
-		mission,
-		timestamp: Math.floor(new Date() / 1000)
-	}).then(() => console.log("Sent to kafka"))
+	sendTrackingMessage(election_object)
+		.then(() => console.log("Sent to kafka"))
 		.catch(e => console.log("Error sending to kafka", e))
 
 	// Send reply to browser
-	getMission(mission).then(data => {
-		sendResponse(res, `<h1>${data.mission}</h1><p>${data.heading}</p>` +
+	getParty(party).then(data => {
+		sendResponse(res, `<h1>${data.partyId}</h1><p>100 Stimmen für: ${data.name}</p>` +
 			data.description.split("\n").map(p => `<p>${p}</p>`).join("\n"),
 			data.cached
 		)
