@@ -1,11 +1,10 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
-from pyspark.sql.types import IntegerType, StringType, StructType, TimestampType
+from pyspark.sql.types import ArrayType, IntegerType, MapType, StringType, StructField, StructType, TimestampType
 import mysqlx
 
 dbOptions = {"host": "my-app-mysql-service", 'port': 33060, "user": "root", "password": "mysecretpw"}
-dbSchema = 'popular'
-windowDuration = '5 minutes'
+dbSchema = 'election_app'
 slidingDuration = '1 minute'
 
 # Example Part 1
@@ -23,49 +22,45 @@ kafkaMessages = spark \
     .format("kafka") \
     .option("kafka.bootstrap.servers",
             "my-cluster-kafka-bootstrap:9092") \
-    .option("subscribe", "tracking-data") \
+    .option("subscribe", "election_input") \
     .option("startingOffsets", "earliest") \
     .load()
 
 # Define schema of tracking data
-trackingMessageSchema = StructType() \
-    .add("mission", StringType()) \
-    .add("timestamp", IntegerType())
+electionMessageSchema = StructType([
+    StructField("election_id", StringType()),
+    StructField("votes", ArrayType(
+        StructType([
+            StructField("party_id", IntegerType()),
+            StructField("number_of_votes", IntegerType())
+        ])
+    ))
+])
 
 # Example Part 3
 # Convert value: binary -> JSON -> fields + parsed timestamp
-trackingMessages = kafkaMessages.select(
+electionMessages = kafkaMessages.select(
     # Extract 'value' from Kafka message (i.e., the tracking data)
+    column("value").cast("string"),
     from_json(
         column("value").cast("string"),
-        trackingMessageSchema
+        electionMessageSchema
     ).alias("json")
 ).select(
-    # Convert Unix timestamp to TimestampType
-    from_unixtime(column('json.timestamp'))
-    .cast(TimestampType())
-    .alias("parsed_timestamp"),
-
-    # Select all JSON fields
-    column("json.*")
-) \
-    .withColumnRenamed('json.mission', 'mission') \
-    .withWatermark("parsed_timestamp", windowDuration)
+    col('json.election_id').alias('election_id'),
+    explode('json.votes').alias('votes')
+).select(
+    col('election_id'),
+    col('votes.*')
+)
 
 # Example Part 4
 # Compute most popular slides
-popular = trackingMessages.groupBy(
-    window(
-        column("parsed_timestamp"),
-        windowDuration,
-        slidingDuration
-    ),
-    column("mission")
-).count().withColumnRenamed('count', 'views')
+election = electionMessages.groupBy(['election_id', 'party_id']).agg(sum('number_of_votes').alias('sum_votes'))
 
 # Example Part 5
 # Start running the query; print running counts to the console
-consoleDump = popular \
+consoleDump = election \
     .writeStream \
     .trigger(processingTime=slidingDuration) \
     .outputMode("update") \
@@ -81,14 +76,14 @@ def saveToDatabase(batchDataframe, batchId):
     def save_to_db(iterator):
         # Connect to database and use schema
         session = mysqlx.get_session(dbOptions)
-        session.sql("USE popular").execute()
+        session.sql("USE election_app").execute()
 
         for row in iterator:
             # Run upsert (insert or update existing)
-            sql = session.sql("INSERT INTO popular "
-                              "(mission, count) VALUES (?, ?) "
-                              "ON DUPLICATE KEY UPDATE count=?")
-            sql.bind(row.mission, row.views, row.views).execute()
+            sql = session.sql("INSERT INTO election_results "
+                              "(election_uuid, party_id, number_of_votes) VALUES (?, ?, ?) "
+                              "ON DUPLICATE KEY UPDATE number_of_votes=?")
+            sql.bind(row.election_id, row.party_id, row.sum_votes, row.sum_votes).execute()
 
         session.close()
 
@@ -98,7 +93,7 @@ def saveToDatabase(batchDataframe, batchId):
 # Example Part 7
 
 
-dbInsertStream = popular.writeStream \
+dbInsertStream = election.writeStream \
     .trigger(processingTime=slidingDuration) \
     .outputMode("update") \
     .foreachBatch(saveToDatabase) \
