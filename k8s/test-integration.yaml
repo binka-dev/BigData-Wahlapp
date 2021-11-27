@@ -2,36 +2,36 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: popular-slides
+  name: test-integration
   labels:
-    app: popular-slides
+    app: test-integration
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: popular-slides-web
+      app: test-integration
   template:
     metadata:
       labels:
-        app: popular-slides-web
+        app: test-integration
     spec:
       containers:
-        - name: popular-slides-web
-          image: farberg/popular-slides
+        - name: test-integration
+          image: test-integration
           ports:
-            - containerPort: 3000
+            - containerPort: 80
 
 ---
 #Begin: Service
 kind: Service
 apiVersion: v1
 metadata:
-  name: popular-slides-service
+  name: test-integration
 spec:
   selector:
-    app: popular-slides-web
+    app: test-integration
   ports:
     - protocol: TCP
-      port: 3000
-      targetPort: 3000
+      port: 80
+      targetPort: 80
 #End: Service
