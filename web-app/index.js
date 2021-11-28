@@ -8,7 +8,6 @@ const express = require('express')
 
 const app = express()
 const cacheTimeSecs = 15
-// const numberOfMissions = 30
 // Including "others"
 const numberOfParties = 8
 
@@ -146,20 +145,6 @@ async function sendTrackingMessage(data) {
 // -------------------------------------------------------
 
 function sendResponse(res, html, cachedResult) {
-// 	res.send(`<!DOCTYPE html>
-// 	<html lang="en">
-// 	<head>
-// 		<meta charset="UTF-8">
-// 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-// 		<title>Election App</title>
-// 	</head>
-// 	<body>
-// 	${html}
-// Test
-// 	</body>
-// </html>
-// `);
-// return;
 	res.send(`<!DOCTYPE html>
 		<html lang="en">
 		<head>
@@ -205,7 +190,6 @@ function sendResponse(res, html, cachedResult) {
 
 // Get list of current election results (from cache or db)
 async function getParties() {
-	// const key = 'missions'
 	const key = 'parties'
 	let cachedata = await getFromCache(key)
 
@@ -214,7 +198,6 @@ async function getParties() {
 		return { result: cachedata, cached: true }
 	} else {
 		console.log(`Cache miss for key=${key}, querying database`)
-		// let executeResult = await executeQuery("SELECT mission FROM missions", [])
 		let executeResult = await executeQuery("SELECT party_id, party_name, party_description FROM parties", [])
 		let data = executeResult.fetchAll()
 		if (data) {
@@ -230,54 +213,28 @@ async function getParties() {
 }
 
 // Get popular missions (from db only)
-// async function getPopular(maxCount) {
 async function getVotes() {
-	// const query = "SELECT mission, count FROM popular ORDER BY count DESC LIMIT ?"
-	const query = "SELECT e.party_id, e.number_of_votes, p.party_name FROM election_results e INNER JOIN parties p ON (e.party_id = p.party_id) WHERE e.election_uuid='fdf293ee-bace-40c9-845d-1fb559b50e72' ORDER BY number_of_votes DESC"
+	const query = "SELECT e.party_id, e.number_of_votes, 100 * e.number_of_votes / (SELECT SUM(number_of_votes) FROM election_results WHERE e.election_uuid='fdf293ee-bace-40c9-845d-1fb559b50e72') as percentage_of_votes, p.party_name FROM election_results e INNER JOIN parties p ON (e.party_id = p.party_id) WHERE e.election_uuid='fdf293ee-bace-40c9-845d-1fb559b50e72' ORDER BY number_of_votes DESC"
 	let result = (await executeQuery(query, []))
 		.fetchAll()
-		// .map(row => ({ mission: row[0], count: row[1] }))
-		.map(row => ({ party: row[0], count: row[1], partyName: row[2] }))
+		.map(row => ({ party: row[0], count: row[1], percentage: row[2], partyName: row[3] }))
 	console.log(`Got votes=${result}, storing in cache`)
 	return result
 }
 
 // Return HTML for start page
 app.get("/", (req, res) => {
-	// sendResponse(res, "party", null);
-	// const topX = 10;
-	// Promise.all([getMissions(), getPopular(topX)]).then(values => {
 	Promise.all([getParties(), getVotes()]).then(values => {
 
-		// const missions = values[0]
-		// const popular = values[1]
 		const parties = values[0]
 		const votes = values[1]
-
-		// const missionsHtml = missions.result
-		// 	.map(m => `<a href='missions/${m}'>${m}</a>`)
-		// 	.join(", ")
-
-		// const popularHtml = popular
-		// 	.map(pop => `<li> <a href='missions/${pop.mission}'>${pop.mission}</a> (${pop.count} views) </li>`)
-		// 	.join("\n")
-
-		// const html = `
-		// 	<h1>Top ${topX} Missions</h1>		
-		// 	<p>
-		// 		<ol style="margin-left: 2em;"> ${popularHtml} </ol> 
-		// 	</p>
-		// 	<h1>All Missions</h1>
-		// 	<p> ${missionsHtml} </p>
-		// `
-		// sendResponse(res, html, missions.cached)
 
 		const partiesHtml = parties.result
 			.map(p => `<a href='parties/${p.partyId}'>${p.partyName}</a>`)
 			.join(", ")
 
 		const votesHtml = votes
-			.map(vote => `<li> <a href='parties/${vote.party}'>${vote.partyName}</a> (${vote.count} votes) </li>`)
+			.map(vote => `<li> <a href='parties/${vote.party}'>${vote.partyName}</a> (${vote.count} votes - ${vote.percentage} Prozent) </li>`)
 			.join("\n")
 
 		const html = `
@@ -328,7 +285,7 @@ app.get("/parties/:partyId", (req, res) => {
 	let election_object = {
         election_id: "fdf293ee-bace-40c9-845d-1fb559b50e72",
         votes:[
-            {party_id: Number(partyId), number_of_votes: 100}, 
+            {party_id: Number(partyId), number_of_votes: numVotesPerClick}, 
         ]
     }
 
@@ -339,7 +296,7 @@ app.get("/parties/:partyId", (req, res) => {
 
 	// Send reply to browser
 	getParty(partyId).then(data => {
-		sendResponse(res, `<h1>Partei ${data.party_id}</h1><p>100 Stimmen für: ${data.name}</p>` +
+		sendResponse(res, `<h1>Partei ${data.party_id}</h1><p>${numVotesPerClick} Stimmen für: ${data.name}</p>` +
 			data.description.split("\n").map(p => `<p>${p}</p>`).join("\n"),
 			data.cached
 		)
