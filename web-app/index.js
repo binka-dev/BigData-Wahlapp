@@ -133,7 +133,7 @@ async function sendTrackingMessage(data) {
 
 	//Send message
 	await producer.send({
-		topic: options.kafkaTopicTracking,
+		topic: 'election_input',
 		messages: [
 			{ value: JSON.stringify(data) }
 		]
@@ -218,7 +218,7 @@ async function getParties() {
 		let executeResult = await executeQuery("SELECT party_id, party_name, party_description FROM parties", [])
 		let data = executeResult.fetchAll()
 		if (data) {
-			let result = data.map(row => row[0])
+			let result = data.map(row => ({ partyId: row[0], partyName: row[1], partyDesc: row[2]}) )
 			console.log(`Got result=${result}, storing in cache`)
 			if (memcached)
 				await memcached.set(key, result, cacheTimeSecs);
@@ -233,11 +233,11 @@ async function getParties() {
 // async function getPopular(maxCount) {
 async function getVotes() {
 	// const query = "SELECT mission, count FROM popular ORDER BY count DESC LIMIT ?"
-	const query = "SELECT party_id, number_of_votes FROM election_results WHERE election_uuid='fdf293ee-bace-40c9-845d-1fb559b50e72' ORDER BY number_of_votes DESC"
+	const query = "SELECT e.party_id, e.number_of_votes, p.party_name FROM election_results e INNER JOIN parties p ON (e.party_id = p.party_id) WHERE e.election_uuid='fdf293ee-bace-40c9-845d-1fb559b50e72' ORDER BY number_of_votes DESC"
 	let result = (await executeQuery(query, []))
 		.fetchAll()
 		// .map(row => ({ mission: row[0], count: row[1] }))
-		.map(row => ({ party: row[0], count: row[1] }))
+		.map(row => ({ party: row[0], count: row[1], partyName: row[2] }))
 	console.log(`Got votes=${result}, storing in cache`)
 	return result
 }
@@ -271,12 +271,13 @@ app.get("/", (req, res) => {
 		// 	<p> ${missionsHtml} </p>
 		// `
 		// sendResponse(res, html, missions.cached)
+
 		const partiesHtml = parties.result
-			.map(p => `<a href='parties/${p.party_id}'>${p.party_name}</a>`)
+			.map(p => `<a href='parties/${p.partyId}'>${p.partyName}</a>`)
 			.join(", ")
 
 		const votesHtml = votes
-			.map(vote => `<li> <a href='parties/${vote.party}'>${vote.party}</a> (${vote.count} views) </li>`)
+			.map(vote => `<li> <a href='parties/${vote.party}'>${vote.partyName}</a> (${vote.count} votes) </li>`)
 			.join("\n")
 
 		const html = `
@@ -327,7 +328,7 @@ app.get("/parties/:partyId", (req, res) => {
 	let election_object = {
         election_id: "fdf293ee-bace-40c9-845d-1fb559b50e72",
         votes:[
-            {party_id: partyId, number_of_votes: 100}, 
+            {party_id: Number(partyId), number_of_votes: 100}, 
         ]
     }
 
