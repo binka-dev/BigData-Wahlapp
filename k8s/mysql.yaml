@@ -18,8 +18,8 @@ data:
     PRIMARY KEY(`party_id`));
 
     CREATE TABLE `election_app`.`elections` (
-    `election_uuid` INT UNSIGNED NOT NULL,
-    `election_name` INT VARCHAR(50) NOT NULL,
+    `election_uuid` CHAR(36) NOT NULL,
+    `election_name` VARCHAR(50) NOT NULL,
     PRIMARY KEY(`election_uuid`));
 
     INSERT INTO parties (party_id, party_name, party_description) VALUES (0, 'Andere', 'Alle nicht aufgeführten Parteien');
@@ -41,7 +41,6 @@ data:
     INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 6, 60);
     INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 7, 70);
     INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 0, 50);
-
 
 ---
 apiVersion: apps/v1

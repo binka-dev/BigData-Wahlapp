@@ -55,8 +55,13 @@ const dbConfig = {
 };
 
 async function executeQuery(query, data) {
-	let session = await mysqlx.getSession(dbConfig);
-	return await session.sql(query, data).bind(data).execute()
+	console.log("Start init session!")
+	let session = await mysqlx.getSession(dbConfig)
+	console.log("Got session!")
+	let queryResult = await session.sql(query, data).bind(data).execute()
+	console.log("returned result")
+
+	return queryResult
 }
 
 // -------------------------------------------------------
@@ -141,6 +146,20 @@ async function sendTrackingMessage(data) {
 // -------------------------------------------------------
 
 function sendResponse(res, html, cachedResult) {
+// 	res.send(`<!DOCTYPE html>
+// 	<html lang="en">
+// 	<head>
+// 		<meta charset="UTF-8">
+// 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+// 		<title>Election App</title>
+// 	</head>
+// 	<body>
+// 	${html}
+// Test
+// 	</body>
+// </html>
+// `);
+// return;
 	res.send(`<!DOCTYPE html>
 		<html lang="en">
 		<head>
@@ -150,7 +169,7 @@ function sendResponse(res, html, cachedResult) {
 			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css">
 			<script>
 				function generateRandomVotes() {
-					const maxRepetitions = Math.floor(Math.random() * 50)
+					const maxRepetitions = Math.floor(Math.random() * 10)
 					document.getElementById("out").innerText = "Generating " + maxRepetitions + " votes, see console output"
 					for(var i = 0; i < maxRepetitions; ++i) {
 						const partyId = Math.floor(Math.random() * ${numberOfParties})
@@ -196,7 +215,7 @@ async function getParties() {
 	} else {
 		console.log(`Cache miss for key=${key}, querying database`)
 		// let executeResult = await executeQuery("SELECT mission FROM missions", [])
-		let executeResult = await executeQuery("SELECT party_id FROM parties", [])
+		let executeResult = await executeQuery("SELECT party_id, party_name, party_description FROM parties", [])
 		let data = executeResult.fetchAll()
 		if (data) {
 			let result = data.map(row => row[0])
@@ -215,17 +234,21 @@ async function getParties() {
 async function getVotes() {
 	// const query = "SELECT mission, count FROM popular ORDER BY count DESC LIMIT ?"
 	const query = "SELECT party_id, number_of_votes FROM election_results WHERE election_uuid='fdf293ee-bace-40c9-845d-1fb559b50e72' ORDER BY number_of_votes DESC"
-	return (await executeQuery(query, []))
+	let result = (await executeQuery(query, []))
 		.fetchAll()
 		// .map(row => ({ mission: row[0], count: row[1] }))
 		.map(row => ({ party: row[0], count: row[1] }))
+	console.log(`Got votes=${result}, storing in cache`)
+	return result
 }
 
 // Return HTML for start page
 app.get("/", (req, res) => {
+	// sendResponse(res, "party", null);
 	// const topX = 10;
 	// Promise.all([getMissions(), getPopular(topX)]).then(values => {
-	Promise.all([getParties(), getVotes]).then(values => {
+	Promise.all([getParties(), getVotes()]).then(values => {
+
 		// const missions = values[0]
 		// const popular = values[1]
 		const parties = values[0]
@@ -249,11 +272,11 @@ app.get("/", (req, res) => {
 		// `
 		// sendResponse(res, html, missions.cached)
 		const partiesHtml = parties.result
-			.map(p => `<a href='parties/${p}'>${p}</a>`)
+			.map(p => `<a href='parties/${p.party_id}'>${p.party_name}</a>`)
 			.join(", ")
 
 		const votesHtml = votes
-			.map(vote => `<li> <a href='missions/${vote.party}'>${vote.party}</a> (${vote.count} views) </li>`)
+			.map(vote => `<li> <a href='parties/${vote.party}'>${vote.party}</a> (${vote.count} views) </li>`)
 			.join("\n")
 
 		const html = `
@@ -261,7 +284,7 @@ app.get("/", (req, res) => {
 			<p>
 				<ol style="margin-left: 2em;"> ${votesHtml} </ol> 
 			</p>
-			<h1>Vot for Parties:</h1>
+			<h1>Vote for Parties:</h1>
 			<p> ${partiesHtml} </p>
 		`
 		sendResponse(res, html, parties.cached)
@@ -298,6 +321,7 @@ async function getParty(partyId) {
 
 app.get("/parties/:partyId", (req, res) => {
 	let partyId = req.params["partyId"]
+	console.log("Received party id:" + partyId)
 
 	// 100 votes per click
 	let election_object = {
@@ -313,8 +337,8 @@ app.get("/parties/:partyId", (req, res) => {
 		.catch(e => console.log("Error sending to kafka", e))
 
 	// Send reply to browser
-	getParty(party).then(data => {
-		sendResponse(res, `<h1>${data.partyId}</h1><p>100 Stimmen für: ${data.name}</p>` +
+	getParty(partyId).then(data => {
+		sendResponse(res, `<h1>Partei ${data.party_id}</h1><p>100 Stimmen für: ${data.name}</p>` +
 			data.description.split("\n").map(p => `<p>${p}</p>`).join("\n"),
 			data.cached
 		)
