@@ -145,7 +145,26 @@ async function sendTrackingMessage(data) {
 // -------------------------------------------------------
 
 function sendResponse(res, html, cachedResult) {
-	res.send(`<!DOCTYPE html>
+	getElections().then(elections => {
+
+		const electionsHtml = elections.result
+			.map(e => `<li><a href='/election/${e.election_uuid}'>${e.election_name}</a></li>`)
+			.join("\n")
+
+		if(cachedResult == null) {
+			cachedResult = elections.cached
+		} else {
+			cachedResult = cachedResult && elections.cached 
+		}
+
+		const overviewHtml = `
+			<h1>Election Overview</h1>		
+			<p>
+				<ol style="margin-left: 2em;"> ${electionsHtml} </ol> 
+			</p>
+		`
+
+		res.send(`<!DOCTYPE html>
 		<html lang="en">
 		<head>
 			<meta charset="UTF-8">
@@ -153,23 +172,20 @@ function sendResponse(res, html, cachedResult) {
 			<title>Election App</title>
 			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css">
 			<script>
-				function generateRandomVotes() {
-					const maxRepetitions = Math.floor(Math.random() * 10)
+				function generateRandomVotes(electionUuid) {
+					const maxRepetitions = Math.floor(Math.random() * 30)
 					document.getElementById("out").innerText = "Generating " + maxRepetitions + " votes, see console output"
 					for(var i = 0; i < maxRepetitions; ++i) {
 						const partyId = Math.floor(Math.random() * ${numberOfParties})
 						console.log("Voting for party id " + partyId)
-						fetch("/parties/" + partyId, {cache: 'no-cache'})
+						fetch("/vote/"+ electionUuid +"/" + partyId, {cache: 'no-cache'})
 					}
 				}
 			</script>
 		</head>
 		<body>
-			<h1>Election App</h1>
-			<p>
-				<a href="javascript: generateRandomVotes();">Randomly generate some votes</a>
-				<span id="out"></span>
-			</p>
+			${overviewHtml}
+			<hr>		
 			${html}
 			<hr>
 			<h2>Information about the generated page</h4>
@@ -182,6 +198,8 @@ function sendResponse(res, html, cachedResult) {
 		</body>
 	</html>
 	`)
+
+	})	
 }
 
 // -------------------------------------------------------
@@ -205,47 +223,88 @@ async function getParties() {
 			console.log(`Got result=${result}, storing in cache`)
 			if (memcached)
 				await memcached.set(key, result, cacheTimeSecs);
-			return { result, cached: false }
+			return { result: result, cached: false }
 		} else {
 			throw "No parties found"
 		}
 	}
 }
 
+
 // Get popular missions (from db only)
-async function getVotes() {
-	const query = "SELECT e.party_id, e.number_of_votes, 100 * e.number_of_votes / (SELECT SUM(number_of_votes) FROM election_results WHERE e.election_uuid='fdf293ee-bace-40c9-845d-1fb559b50e72') as percentage_of_votes, p.party_name FROM election_results e INNER JOIN parties p ON (e.party_id = p.party_id) WHERE e.election_uuid='fdf293ee-bace-40c9-845d-1fb559b50e72' ORDER BY number_of_votes DESC"
-	let result = (await executeQuery(query, []))
-		.fetchAll()
-		.map(row => ({ party: row[0], count: row[1], percentage: row[2], partyName: row[3] }))
-	console.log(`Got votes=${result}, storing in cache`)
-	return result
+async function getVotes(electionUuid) {
+	const key = 'votesForElection_' + electionUuid;
+	let cachedata = await getFromCache(key)
+
+	if (cachedata) {
+		console.log(`Cache hit for key=${key}, cachedata = ${cachedata}`)
+		return { result: cachedata, cached: true }
+	} else {
+		const query = "SELECT e.party_id, e.number_of_votes, 100 * e.number_of_votes / (SELECT SUM(number_of_votes) FROM election_results e2 WHERE e2.election_uuid='"+ electionUuid +"') as percentage_of_votes, p.party_name FROM election_results e INNER JOIN parties p ON (e.party_id = p.party_id) WHERE e.election_uuid='"+ electionUuid +"' ORDER BY number_of_votes DESC"
+		let result = (await executeQuery(query, []))
+			.fetchAll()
+			.map(row => ({ party: row[0], count: row[1], percentage: row[2], partyName: row[3] }))
+		console.log(`Got votes=${result}, storing in cache`)
+		if (memcached)
+			await memcached.set(key, result, cacheTimeSecs);
+		return { result: result, cached: false }
+	}
+}
+
+async function getElections() {
+	const key = 'elections';
+	let cachedata = await getFromCache(key)
+
+	if (cachedata) {
+		console.log(`Cache hit for key=${key}, cachedata = ${cachedata}`)
+		return { result: cachedata, cached: true }
+	} else {
+		const query = "SELECT e.election_uuid, e.election_name FROM elections e ORDER BY e.election_name ASC"
+		let result = (await executeQuery(query, []))
+			.fetchAll()
+			.map(row => ({ election_uuid: row[0], election_name: row[1] }))
+		console.log(`Got elections=${result}, storing in cache`)
+		if (memcached)
+			await memcached.set(key, result, cacheTimeSecs);
+		return { result: result, cached: false }
+	}
 }
 
 // Return HTML for start page
 app.get("/", (req, res) => {
-	Promise.all([getParties(), getVotes()]).then(values => {
+	sendResponse(res, "", null)
+})
+
+app.get("/election/:electionUuid", (req, res) => {
+	let electionUuid = req.params["electionUuid"]
+
+	Promise.all([getParties(), getVotes(electionUuid), getElection(electionUuid)]).then(values => {
 
 		const parties = values[0]
 		const votes = values[1]
+		const election = values[2]
 
 		const partiesHtml = parties.result
-			.map(p => `<a href='parties/${p.partyId}'>${p.partyName}</a>`)
+			.map(p => `<a href='/vote/${electionUuid}/${p.partyId}'>${p.partyName}</a>`)
 			.join(", ")
 
-		const votesHtml = votes
-			.map(vote => `<li> <a href='parties/${vote.party}'>${vote.partyName}</a> (${vote.count} votes - ${vote.percentage} Prozent) </li>`)
+		const votesHtml = votes.result
+			.map(vote => `<li>${vote.partyName} (${vote.count} votes - ${vote.percentage} Prozent) </li>`)
 			.join("\n")
 
 		const html = `
-			<h1>Votes</h1>		
+			<h1>Votes for ${election.result.name}</h1>		
 			<p>
 				<ol style="margin-left: 2em;"> ${votesHtml} </ol> 
 			</p>
 			<h1>Vote for Parties:</h1>
 			<p> ${partiesHtml} </p>
+			<p>
+				<a href="javascript: generateRandomVotes('${electionUuid}');">Randomly generate some votes</a>
+				<span id="out"></span>
+			</p>
 		`
-		sendResponse(res, html, parties.cached)
+		sendResponse(res, html, parties.cached && votes.cached)
 	})
 })
 
@@ -260,7 +319,7 @@ async function getParty(partyId) {
 
 	if (cachedata) {
 		console.log(`Cache hit for key=${key}, cachedata = ${cachedata}`)
-		return { ...cachedata, cached: true }
+		return { result: cachedata, cached: true }
 	} else {
 		console.log(`Cache miss for key=${key}, querying database`)
 
@@ -270,20 +329,46 @@ async function getParty(partyId) {
 			console.log(`Got result=${result}, storing in cache`)
 			if (memcached)
 				await memcached.set(key, result, cacheTimeSecs);
-			return { ...result, cached: false }
+			return { result: result, cached: false }
 		} else {
 			throw "No data found for this party"
 		}
 	}
 }
 
-app.get("/parties/:partyId", (req, res) => {
+async function getElection(electionUuid) {
+	const query = "SELECT election_name FROM elections WHERE election_uuid = ?"
+	const key = 'election_' + electionUuid
+	let cachedata = await getFromCache(key)
+
+	if (cachedata) {
+		console.log(`Cache hit for key=${key}, cachedata = ${cachedata}`)
+		return { result: cachedata, cached: true }
+	} else {
+		console.log(`Cache miss for key=${key}, querying database`)
+
+		let data = (await executeQuery(query, [electionUuid])).fetchOne()
+		if (data) {
+			let result = { name: data[0]}
+			console.log(`Got result=${result}, storing in cache`)
+			if (memcached)
+				await memcached.set(key, result, cacheTimeSecs);
+			return { result: result, cached: false }
+		} else {
+			throw "No data found for this election"
+		}
+	}
+}
+
+
+app.get("/vote/:electionUuid/:partyId", (req, res) => {
 	let partyId = req.params["partyId"]
+	let electionUuid = req.params["electionUuid"]
 	console.log("Received party id:" + partyId)
 
 	// 100 votes per click
 	let election_object = {
-        election_id: "fdf293ee-bace-40c9-845d-1fb559b50e72",
+        election_id: electionUuid,
         votes:[
             {party_id: Number(partyId), number_of_votes: numVotesPerClick}, 
         ]
@@ -296,8 +381,8 @@ app.get("/parties/:partyId", (req, res) => {
 
 	// Send reply to browser
 	getParty(partyId).then(data => {
-		sendResponse(res, `<h1>Partei ${data.party_id}</h1><p>${numVotesPerClick} Stimmen für: ${data.name}</p>` +
-			data.description.split("\n").map(p => `<p>${p}</p>`).join("\n"),
+		sendResponse(res, `<h1>${data.result.name}</h1><p>${numVotesPerClick} Stimmen für: ${data.result.name}</p>` +
+			data.result.description.split("\n").map(p => `<p>${p}</p>`).join("\n"),
 			data.cached
 		)
 	}).catch(err => {
