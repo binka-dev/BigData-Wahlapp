@@ -289,7 +289,7 @@ app.get("/election/:electionUuid", (req, res) => {
 			.join(", ")
 
 		const votesHtml = votes.result
-			.map(vote => `<li>${vote.partyName} (${vote.count} votes - ${vote.percentage} Prozent) </li>`)
+			.map(vote => `<li>${vote.partyName} (${vote.count} votes - ${vote.percentage ?? 0} Prozent) </li>`)
 			.join("\n")
 
 		const html = `
