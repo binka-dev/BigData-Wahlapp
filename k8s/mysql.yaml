@@ -35,32 +35,32 @@ data:
     INSERT INTO elections (election_uuid, election_name) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 'Plankstadt');
     INSERT INTO elections (election_uuid, election_name) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 'Ludwigsburg');
 
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 1, 200);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 2, 300);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 3, 150);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 4, 100);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 5, 120);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 6, 60);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 7, 70);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 0, 50);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 1, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 2, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 3, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 4, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 5, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 6, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 7, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('fdf293ee-bace-40c9-845d-1fb559b50e72', 0, 0);
 
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 1, 100);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 2, 350);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 3, 250);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 4, 300);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 5, 520);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 6, 300);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 7, 150);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 0, 80);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 1, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 2, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 3, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 4, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 5, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 6, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 7, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('1df293ee-bace-40c9-845d-1fb559b50e72', 0, 0);
 
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 1, 600);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 2, 500);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 3, 450);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 4, 200);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 5, 20);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 6, 40);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 7, 80);
-    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 0, 50);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 1, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 2, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 3, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 4, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 5, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 6, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 7, 0);
+    INSERT INTO election_results (election_uuid, party_id, number_of_votes) VALUES ('2df293ee-bace-40c9-845d-1fb559b50e72', 0, 0);
 
 ---
 apiVersion: apps/v1
