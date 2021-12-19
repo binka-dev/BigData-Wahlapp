@@ -1,10 +1,22 @@
 # Use Case: An election app
+## Description
+A simple App to model several elections with the possibility to vote
 
 ```json
-{ 
-	mission: 'sts-10', 
-	timestamp: 1604325221 
-}
+	{
+        "election_id": "fdf293ee-bace-40c9-845d-1fb559b50e72",
+        "votes":
+		[
+            {
+				"party_id": 2, 
+				"number_of_votes": 100
+			}, 
+            {
+				"party_id": 4, 
+				"number_of_votes": 70
+			}, 
+        ]
+	}
 ```
 
 ## Prerequisites
