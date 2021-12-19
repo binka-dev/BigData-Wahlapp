@@ -1,6 +1,6 @@
 # Use Case: An election app
 ## Description
-A simple App to model several elections with the possibility to vote
+A simple App to model several elections with the possibility to vote. The link to the Live Demo can be accessed [here](https://youtu.be/bZbP29ddoEE).
 
 ```json
 {
