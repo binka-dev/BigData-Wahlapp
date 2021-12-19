@@ -14,7 +14,7 @@ A simple App to model several elections with the possibility to vote
     {
       "party_id": 4, 
       "number_of_votes": 70
-    }, 
+    }
   ]
 }
 ```
